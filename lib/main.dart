@@ -15,84 +15,90 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: PhoneAuthScreen(),
+      home: AuthScreen(),
     );
   }
 }
 
-class PhoneAuthScreen extends StatefulWidget {
-  const PhoneAuthScreen({super.key});
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
 
   @override
-  State<PhoneAuthScreen> createState() => _PhoneAuthScreenState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
-  final phoneController = TextEditingController();
-  final codeController = TextEditingController();
-  String? verificationId;
+class _AuthScreenState extends State<AuthScreen> {
+  final emailController = TextEditingController();
+  final passController = TextEditingController();
   String? uid;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Firebase Phone Auth")),
+      appBar: AppBar(title: const Text("Firebase Email/Password Auth")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(labelText: "Phone (+201234567890)"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await FirebaseAuth.instance.verifyPhoneNumber(
-                  phoneNumber: phoneController.text.trim(),
-                  verificationCompleted: (PhoneAuthCredential credential) async {
-                    final user = await FirebaseAuth.instance.signInWithCredential(credential);
-                    setState(() => uid = user.user?.uid);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Auto Verified & Signed In")),
-                    );
-                  },
-                  verificationFailed: (FirebaseAuthException e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Error: ${e.message}")),
-                    );
-                  },
-                  codeSent: (String verId, int? resendToken) {
-                    setState(() => verificationId = verId);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Code Sent via SMS")),
-                    );
-                  },
-                  codeAutoRetrievalTimeout: (String verId) {
-                    setState(() => verificationId = verId);
-                  },
-                );
-              },
-              child: const Text("Send Code"),
+              controller: emailController,
+              decoration: const InputDecoration(labelText: "Email"),
             ),
             TextField(
-              controller: codeController,
-              decoration: const InputDecoration(labelText: "Enter SMS Code"),
+              controller: passController,
+              decoration: const InputDecoration(labelText: "Password"),
+              obscureText: true,
             ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                if (verificationId != null) {
-                  final credential = PhoneAuthProvider.credential(
-                    verificationId: verificationId!,
-                    smsCode: codeController.text.trim(),
+                try {
+                  final user = await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                    email: emailController.text.trim(),
+                    password: passController.text.trim(),
                   );
-                  final user = await FirebaseAuth.instance.signInWithCredential(credential);
                   setState(() => uid = user.user?.uid);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Signed In Successfully")),
+                    const SnackBar(content: Text("Sign Up Successful")),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: $e")),
                   );
                 }
               },
-              child: const Text("Verify & Sign In"),
+              child: const Text("Sign Up"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final user = await FirebaseAuth.instance
+                      .signInWithEmailAndPassword(
+                    email: emailController.text.trim(),
+                    password: passController.text.trim(),
+                  );
+                  setState(() => uid = user.user?.uid);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Sign In Successful")),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: $e")),
+                  );
+                }
+              },
+              child: const Text("Sign In"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                setState(() => uid = null);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Signed Out")),
+                );
+              },
+              child: const Text("Sign Out"),
             ),
             const SizedBox(height: 20),
             Text(uid == null ? "Not signed in" : "UID: $uid"),
